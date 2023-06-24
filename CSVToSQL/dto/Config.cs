@@ -19,7 +19,7 @@ namespace CSVToSQL.dto
     {
         public string FileName { get; set; }
 
-        public string Encoding { get; set; }
+        public int EncodingCodePage { get; set; }
 
         public string ColumnSplitter { get; set; }
 

@@ -14,10 +14,11 @@ namespace CSVToSQL.bean.impl
 
         public void Gen(Config config)
         {
+            Encoding csvEncoding = Encoding.GetEncoding(config.CsvConfig.EncodingCodePage);
+
             string script = String.Format("{0};",
                 string.Join($";{Environment.NewLine}", CsvReader
-                .ReadLines(File.ReadAllBytes(config.CsvConfig.FileName), Encoding.Default, config.CsvConfig.ColumnSplitter)
-                //.ReadLines(File.ReadAllBytes(config.CsvConfig.FileName), Encoding.GetEncoding(config.CsvConfig.Encoding), config.CsvConfig.ColumnSplitter)
+                .ReadLines(File.ReadAllBytes(config.CsvConfig.FileName), csvEncoding, config.CsvConfig.ColumnSplitter)
                 .Select(line =>
                 {
                     var columns = string.Join(", ", config.TableConfig.Columns.Select(c => c.Name));
@@ -26,9 +27,12 @@ namespace CSVToSQL.bean.impl
                     return scrp;
                 })));
 
-            using (StreamWriter sw = new StreamWriter($"{config.OutputFolder}{Path.DirectorySeparatorChar}{config.TableConfig.Schema}_{config.TableConfig.Name}.sql"))
+            byte[] bScrpit = Encoding.Convert(csvEncoding, Encoding.UTF8, csvEncoding.GetBytes(script));
+            string utf8Script = Encoding.UTF8.GetString(bScrpit);
+
+            using (StreamWriter sw = new StreamWriter($"{config.OutputFolder}{Path.DirectorySeparatorChar}{config.TableConfig.Schema}_{config.TableConfig.Name}.sql", false, Encoding.UTF8))
             {
-                sw.Write(script);
+                sw.Write(utf8Script);
                 sw.Flush();
                 sw.Close();
             }
@@ -49,7 +53,7 @@ namespace CSVToSQL.bean.impl
             switch (column.TypeName)
             {
                 case "String":
-                    return $"'{value}'";
+                    return $"'{value.Replace("'", "''")}'";
                 case "DateTime":
                     return $"TO_DATE('{value}', '{column.Format}')";
                 default:
